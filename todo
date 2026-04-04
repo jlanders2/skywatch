@@ -6,3 +6,4 @@
 - write a SINGLE happy path test for a DF-17 (ADB-S)
 - Learn more about the data block, DF was the last portion i really think i understood
 - Finish readme
+- Better sdr_core errors

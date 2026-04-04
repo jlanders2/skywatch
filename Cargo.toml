@@ -4,4 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-
+sdr_core = { path = "../sdr_core" }
+mode_s = { path = "../mode_s" }
+soapysdr_tools = { path = "../soapysdr_tools" }
