@@ -89,23 +89,7 @@ fn main() {
                             }
                         }
                         if df == 17 {
-                            if i + (27 * 2) >= samples_read { // 27 bits is what's between DF and Message
-                                overflow = true;
-                            }
-                            i = i + (27 * 2);
-                            if i + (56 * 2) >= samples_read {
-                                overflow = true;
-                            }
-                            if !overflow {
-                                let msg_buffer = &magnitudes[i..i+(56*2)];
-                                for bit in 0..(56 * 2) {
-                                    let first = msg_buffer[bit * 2];
-                                    let second= msg_buffer[(bit * 2) + 1];
-                                    if first > second {
-                                        df |= 1 << (4 - bit);
-                                    }
-                                }
-                            }
+                            // Hit ADS-B
                         }
                     }
                 }
