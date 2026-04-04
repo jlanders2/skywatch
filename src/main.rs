@@ -1,8 +1,9 @@
 use std::{i32::MAX, io::{self, Read}, process::exit};
 
 use num_complex::Complex;
+use soapysdr::RxStream;
 
-fn main() {
+fn init_soapysdr() -> Result<RxStream<Complex<f32>>, soapysdr::Error> {
     let mut devices = soapysdr::enumerate("").expect("Devices could not be retrieved.");
     let device_count = devices.iter().len();
     if device_count <= 0 {
@@ -29,7 +30,12 @@ fn main() {
     println!("Supported formats: {:?}", formats);
     let mut rx_stream = device.rx_stream::<Complex<f32>>(&[channel]).expect("Device could not successfully create Rx Stream");
     rx_stream.activate(None).expect("Rx Stream could not successfully activate");
-    // receive samples
+    
+    rx_stream
+}
+
+fn main() {
+    let mut rx_stream = init_soapysdr().expect("Could not initialize SoapySDR");
     let mut buffer = vec![Complex::new(0.0f32, 0.0f32); 1_024_000];
     let threshold = 0.01f32;
     let preamble_pattern = [
@@ -50,7 +56,6 @@ fn main() {
         false, 
         false,
     ];
-    let df_length: usize = 5; // bits
     loop {
         let samples_read = rx_stream.read(&mut [buffer.as_mut_slice()], 1_000_000).expect("Rx Stream could not successfully read");
         let magnitudes: Vec<f32> = buffer[..samples_read].iter().map(|s|s.norm()).collect();
