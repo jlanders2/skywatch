@@ -1,3 +1,5 @@
+- Implement traits for sdr_core
+- Remove sykwatch crates dep on soapysdr and num-complex
 - Move code into logical modules so that main can stay clean
 - Magic numbers meets eraser, get rid of them
 - Look into testing frameworks and write a single SINGLE happy path test for a preamble

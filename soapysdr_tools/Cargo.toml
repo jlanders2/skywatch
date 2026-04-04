@@ -1,0 +1,8 @@
+[package]
+name = "soapysdr_tools"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+soapysdr = "0.5.0"
+num-complex = "0.4"

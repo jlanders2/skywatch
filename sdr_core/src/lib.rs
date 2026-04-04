@@ -1,0 +1,7 @@
+trait SdrDevice {
+
+}
+
+trait SdrStream {
+
+}
