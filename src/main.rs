@@ -31,7 +31,7 @@ fn init_soapysdr() -> Result<RxStream<Complex<f32>>, soapysdr::Error> {
     let mut rx_stream = device.rx_stream::<Complex<f32>>(&[channel]).expect("Device could not successfully create Rx Stream");
     rx_stream.activate(None).expect("Rx Stream could not successfully activate");
     
-    rx_stream
+    return Ok(rx_stream);
 }
 
 fn main() {
