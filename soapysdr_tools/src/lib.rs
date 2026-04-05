@@ -81,7 +81,8 @@ impl SdrDevice for SoapySdrDevice {
 
         let soapysdr_stream = SoapySdrStream {
             direction: self.direction,
-            buffer: vec![],
+            // TODO - Magic number buffer size 1MB
+            buffer: vec![Complex::new(0.0f32, 0.0f32); 1_048_576],
             stream: rx_stream 
         };
     
