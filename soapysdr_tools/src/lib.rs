@@ -80,7 +80,6 @@ impl SdrDevice for SoapySdrDevice {
         rx_stream.activate(None).expect("Successfully activated stream");
 
         let soapysdr_stream = SoapySdrStream {
-            activated: false,
             direction: self.direction,
             buffer: vec![],
             stream: rx_stream 
@@ -91,7 +90,6 @@ impl SdrDevice for SoapySdrDevice {
 }
 
 pub struct SoapySdrStream {
-    activated: bool,
     direction: Direction,
     buffer: Vec<Complex<f32>>,
     stream: RxStream<Complex<f32>>
@@ -101,9 +99,6 @@ impl SdrStream for SoapySdrStream {
     fn read(&mut self) -> Result<Vec<f32>, SdrError> {
         if self.direction != Direction::Rx {
             panic!("Attempted to read in when direction set to transmission");
-        }
-        if !self.activated {
-            panic!("Attempted to read prior to stream activation");
         }
         let samples_read = self.stream.read(&mut [self.buffer.as_mut_slice()], 1_000_000).expect("Successfully read from Rx Stream");
         // Convert samples from raw I/Q data to scalar values; expensive, so do once here each loop
