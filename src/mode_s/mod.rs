@@ -1,5 +1,9 @@
 use std::{error::Error, fmt};
 
+mod constants;
+
+use constants::*;
+
 static DF_LENGTH: usize = 10; // 5 bits, 10 samples @ 2_000_000 sample rate
 static PREAMBLE_LENGTH: usize = 16;
 const PREAMBLE_PATTERN: [bool; PREAMBLE_LENGTH] = [
@@ -55,8 +59,7 @@ pub fn proccess_samples(samples: Vec<f32>) -> Result<(), ModeSError> {
 fn check_preamble(magnitude_buffer: [f32; PREAMBLE_LENGTH]) -> bool {
     let mut result = true;
     for i in 0..PREAMBLE_LENGTH {
-        // TODO - Magic number 0.01f32 is hit threshold
-        if (magnitude_buffer[i] > 0.01f32).ne(&PREAMBLE_PATTERN[i]) {
+        if (magnitude_buffer[i] > HIT_THRESHOLD).ne(&PREAMBLE_PATTERN[i]) {
             result = false;
             break;
         }
