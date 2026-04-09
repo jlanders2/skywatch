@@ -22,11 +22,11 @@ pub trait Sdr {
 }
 
 pub trait SdrDevice {
-    fn set_direction(&mut self, direction: SdrDirection) -> Result<(), SdrError>;
-    fn set_channel(&mut self, channel: usize) -> Result<(), SdrError>;
-    fn set_sample_rate(&mut self, sample_rate: f64) -> Result<(), SdrError>;
-    fn set_frequency(&mut self, frequency: f64) -> Result<(), SdrError>;
-    fn set_gain(&mut self, gain: f64) -> Result<(), SdrError>;
+    fn set_direction(&mut self, direction: SdrDirection);
+    fn set_channel(&mut self, channel: usize);
+    fn set_sample_rate(&mut self, sample_rate: f64);
+    fn set_frequency(&mut self, frequency: f64);
+    fn set_gain(&mut self, gain: f64);
     fn get_stream(&self) -> Result<Box<dyn SdrStream>, SdrError>;
 }
 

@@ -11,23 +11,23 @@ impl Sdr for MockSdr {
 pub struct MockSdrDevice {}
 
 impl SdrDevice for MockSdrDevice {
-    fn set_direction(&mut self, _direction: SdrDirection) -> Result<(), SdrError> {
+    fn set_direction(&mut self, _direction: SdrDirection) {
         todo!()
     }
 
-    fn set_channel(&mut self, _channel: usize) -> Result<(), SdrError> {
+    fn set_channel(&mut self, _channel: usize) {
         todo!()
     }
 
-    fn set_sample_rate(&mut self, _sample_rate: f64) -> Result<(), SdrError> {
+    fn set_sample_rate(&mut self, _sample_rate: f64) {
         todo!()
     }
 
-    fn set_frequency(&mut self, _frequency: f64) -> Result<(), SdrError> {
+    fn set_frequency(&mut self, _frequency: f64) {
         todo!()
     }
 
-    fn set_gain(&mut self, _gain: f64) -> Result<(), SdrError> {
+    fn set_gain(&mut self, _gain: f64) {
         todo!()
     }
 

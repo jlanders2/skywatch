@@ -4,13 +4,13 @@ use skywatch::sdr::SdrDirection;
 
 fn main() {
     let sdr = runtime::sdr_factory("soapysdr");
+    // Builder pattern might be nice here
     let mut device = sdr.create_device().unwrap();
-    // Assume all these let _ are an anti-pattern
-    let _ = device.set_channel(0);
-    let _ = device.set_direction(SdrDirection::Receive);
-    let _ = device.set_frequency(1_090_000_000.0);
-    let _ = device.set_sample_rate(2_000_000.0);
-    let _ = device.set_gain(40.0);
+    device.set_channel(0);
+    device.set_direction(SdrDirection::Receive);
+    device.set_frequency(1_090_000_000.0);
+    device.set_sample_rate(2_000_000.0);
+    device.set_gain(40.0);
 
     let mut stream = device.get_stream().unwrap();
     loop {

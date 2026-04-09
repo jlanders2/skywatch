@@ -50,7 +50,7 @@ pub struct SoapySdrDevice {
 }
 
 impl SdrDevice for SoapySdrDevice {
-    fn set_direction(&mut self, direction: SdrDirection) -> Result<(), SdrError> {
+    fn set_direction(&mut self, direction: SdrDirection) {
         if direction == SdrDirection::Transmit {
             panic!("Transmission is not currently supported");
         }
@@ -58,38 +58,28 @@ impl SdrDevice for SoapySdrDevice {
             SdrDirection::Receive => self.direction = Direction::Rx,
             SdrDirection::Transmit => self.direction = Direction::Tx,
         }
-
-        Ok(())
     }
 
-    fn set_channel(&mut self, channel: usize) -> Result<(), SdrError> {
+    fn set_channel(&mut self, channel: usize) {
         self.channel = channel;
-
-        Ok(())
     }
 
-    fn set_sample_rate(&mut self, sample_rate: f64) -> Result<(), SdrError> {
+    fn set_sample_rate(&mut self, sample_rate: f64) {
         self.device
             .set_sample_rate(self.direction, self.channel, sample_rate)
             .expect("Successfully set sample rate for device");
-
-        Ok(())
     }
 
-    fn set_frequency(&mut self, frequency: f64) -> Result<(), SdrError> {
+    fn set_frequency(&mut self, frequency: f64) {
         self.device
             .set_frequency(self.direction, self.channel, frequency, "")
             .expect("Successfully set frequency for device");
-
-        Ok(())
     }
 
-    fn set_gain(&mut self, gain: f64) -> Result<(), SdrError> {
+    fn set_gain(&mut self, gain: f64) {
         self.device
             .set_gain(self.direction, self.channel, gain)
             .expect("Successfully set gain for device");
-
-        Ok(())
     }
 
     fn get_stream(&self) -> Result<Box<dyn SdrStream>, SdrError> {
