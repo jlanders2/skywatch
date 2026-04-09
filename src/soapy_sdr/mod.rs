@@ -10,7 +10,7 @@ impl Sdr for SoapySdr {
     fn create_device(&self) -> Result<Box<dyn SdrDevice>, SdrError> {
         let mut devices = soapysdr::enumerate("").expect("Devices were retrieved.");
         let device_count = devices.iter().len();
-        if device_count <= 0 {
+        if device_count == 0 {
             panic!("No compatible devices were detected. Terminating...");
         }
         for (i, device) in devices.iter().enumerate() {
@@ -39,7 +39,7 @@ impl Sdr for SoapySdr {
             channel: 0,
         };
 
-        return Ok(Box::new(soapysdr_device));
+        Ok(Box::new(soapysdr_device))
     }
 }
 
@@ -59,13 +59,13 @@ impl SdrDevice for SoapySdrDevice {
             SdrDirection::Transmit => self.direction = Direction::Tx,
         }
 
-        return Ok(());
+        Ok(())
     }
 
     fn set_channel(&mut self, channel: usize) -> Result<(), SdrError> {
         self.channel = channel;
 
-        return Ok(());
+        Ok(())
     }
 
     fn set_sample_rate(&mut self, sample_rate: f64) -> Result<(), SdrError> {
@@ -73,7 +73,7 @@ impl SdrDevice for SoapySdrDevice {
             .set_sample_rate(self.direction, self.channel, sample_rate)
             .expect("Successfully set sample rate for device");
 
-        return Ok(());
+        Ok(())
     }
 
     fn set_frequency(&mut self, frequency: f64) -> Result<(), SdrError> {
@@ -81,7 +81,7 @@ impl SdrDevice for SoapySdrDevice {
             .set_frequency(self.direction, self.channel, frequency, "")
             .expect("Successfully set frequency for device");
 
-        return Ok(());
+        Ok(())
     }
 
     fn set_gain(&mut self, gain: f64) -> Result<(), SdrError> {
@@ -89,7 +89,7 @@ impl SdrDevice for SoapySdrDevice {
             .set_gain(self.direction, self.channel, gain)
             .expect("Successfully set gain for device");
 
-        return Ok(());
+        Ok(())
     }
 
     fn get_stream(&self) -> Result<Box<dyn SdrStream>, SdrError> {
@@ -108,7 +108,7 @@ impl SdrDevice for SoapySdrDevice {
             stream: rx_stream,
         };
 
-        return Ok(Box::new(soapysdr_stream));
+        Ok(Box::new(soapysdr_stream))
     }
 }
 
@@ -134,6 +134,6 @@ impl SdrStream for SoapySdrStream {
             .map(|s| s.norm())
             .collect();
 
-        return Ok(scalars);
+        Ok(scalars)
     }
 }

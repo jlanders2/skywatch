@@ -32,7 +32,7 @@ pub fn proccess_samples(samples: Vec<f32>) -> Result<(), ModeSError> {
             .expect("slice length is always PREAMBLE_LENGTH");
         let preamble_detected = check_preamble(preamble);
         if preamble_detected {
-            i = i + PREAMBLE_LENGTH;
+            i += PREAMBLE_LENGTH;
             // DF
             if (i + DF_LENGTH) >= samples_read {
                 break;
@@ -42,14 +42,14 @@ pub fn proccess_samples(samples: Vec<f32>) -> Result<(), ModeSError> {
                 .expect("slice length is always DF_LENGTH");
             let df = extract_df(df_buffer);
             println!("Preamble Hit: DF-{}", df);
-            i = i + DF_LENGTH;
+            i += DF_LENGTH;
             // TC
         } else {
-            i = i + 1;
+            i += 1;
         }
     }
 
-    return Ok(());
+    Ok(())
 }
 
 fn check_preamble(magnitude_buffer: [f32; PREAMBLE_LENGTH]) -> bool {
@@ -62,7 +62,7 @@ fn check_preamble(magnitude_buffer: [f32; PREAMBLE_LENGTH]) -> bool {
         }
     }
 
-    return result;
+    result
 }
 
 fn extract_df(df_buffer: [f32; DF_LENGTH]) -> u8 {
@@ -75,5 +75,5 @@ fn extract_df(df_buffer: [f32; DF_LENGTH]) -> u8 {
         }
     }
 
-    return df;
+    df
 }
