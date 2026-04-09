@@ -14,7 +14,7 @@ impl fmt::Display for SdrError {
 #[derive(PartialEq)]
 pub enum SdrDirection {
     Transmit,
-    Receive
+    Receive,
 }
 
 pub trait Sdr {

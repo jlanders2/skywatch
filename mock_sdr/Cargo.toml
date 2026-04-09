@@ -1,7 +1,0 @@
-[package]
-name = "mock_sdr"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-sdr_core = { path = "../sdr_core"}

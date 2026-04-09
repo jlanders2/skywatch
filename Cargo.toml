@@ -4,15 +4,5 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-sdr_core = { path = "./sdr_core" }
-mode_s = { path = "./mode_s" }
-skywatch_runtime = { path = "./skywatch_runtime" }
-
-[workspace]
-members = [
-    "sdr_core",
-    "mode_s",
-    "skywatch_runtime",
-    "soapysdr_tools",
-    "mock_sdr"
-]
+soapysdr = "0.5.0"
+num-complex = "0.4"

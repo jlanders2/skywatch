@@ -1,9 +1,0 @@
-[package]
-name = "skywatch_runtime"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-sdr_core = { path = "../sdr_core" }
-soapysdr_tools = { path = "../soapysdr_tools" }
-mock_sdr = { path = "../mock_sdr" }

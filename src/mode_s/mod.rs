@@ -2,23 +2,9 @@ use std::{error::Error, fmt};
 
 static DF_LENGTH: usize = 10; // 5 bits, 10 samples @ 2_000_000 sample rate
 static PREAMBLE_LENGTH: usize = 16;
-const PREAMBLE_PATTERN: [bool;PREAMBLE_LENGTH]= [
-    true, 
-    false,
-    true,
-    false,
-    false, 
-    false,
-    false, 
-    true,
-    false, 
-    true,
-    false, 
-    false,
-    false, 
-    false,
-    false, 
-    false,
+const PREAMBLE_PATTERN: [bool; PREAMBLE_LENGTH] = [
+    true, false, true, false, false, false, false, true, false, true, false, false, false, false,
+    false, false,
 ];
 
 #[derive(Debug)]
@@ -31,7 +17,6 @@ impl fmt::Display for ModeSError {
         write!(f, "ModeSError - Bad error, not descriptive")
     }
 }
-
 
 pub fn proccess_samples(samples: Vec<f32>) -> Result<(), ModeSError> {
     let samples_read = samples.len();
@@ -64,7 +49,7 @@ pub fn proccess_samples(samples: Vec<f32>) -> Result<(), ModeSError> {
         }
     }
 
-    return Ok(())
+    return Ok(());
 }
 
 fn check_preamble(magnitude_buffer: [f32; PREAMBLE_LENGTH]) -> bool {
@@ -84,7 +69,7 @@ fn extract_df(df_buffer: [f32; DF_LENGTH]) -> u8 {
     let mut df = 0u8;
     for bit in 0..5 {
         let first = df_buffer[bit * 2];
-        let second= df_buffer[(bit * 2) + 1];
+        let second = df_buffer[(bit * 2) + 1];
         if first > second {
             df |= 1 << (4 - bit);
         }

@@ -1,4 +1,4 @@
-use sdr_core::*;
+use crate::sdr::*;
 
 pub struct MockSdr;
 
@@ -8,7 +8,7 @@ impl Sdr for MockSdr {
     }
 }
 
-pub struct MockSdrDevice { }
+pub struct MockSdrDevice {}
 
 impl SdrDevice for MockSdrDevice {
     fn set_direction(&mut self, _direction: SdrDirection) -> Result<(), SdrError> {
