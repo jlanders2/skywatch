@@ -1,3 +1,4 @@
+- I HAVE TO WRITE A WORKING TEST FOR THIS 8D4840D6202CC371C32CE0576098 (HEX)
 - Magic numbers meets eraser, get rid of them
 - Write tests to test assumptions of each portion of the
   decoding process pre-amble, DF, etc. There is an example
