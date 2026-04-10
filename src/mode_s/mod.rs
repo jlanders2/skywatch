@@ -8,7 +8,7 @@ use enums::*;
 
 // The following lengths are specific to 1090MHz ADS-B
 // and should be placed appropriately at some point.
-static ADS_B_LENGTH: usize = 112 * 2; // 112 bits, 124 samples @ 2_000_000 sample rate
+static ADS_B_LENGTH: usize = 112 * 2; // 112 bits, 224 samples @ 2_000_000 sample rate
 static DF_LENGTH: usize = 5 * 2; // 5 bits, 10 samples @ 2_000_000 sample rate
 static CA_LENGTH: usize = 3 * 2; // 3 bits, 6 samples @ 2_000_000 sample rate
 static ICAO_LENGTH: usize = 24 * 2; // 24 bits, 48 samples @ 2_000_000 sample rate
@@ -54,7 +54,6 @@ pub fn proccess_samples(samples: Vec<f32>) -> Result<(), ModeSError> {
                 .expect("slice length is always DF_LENGTH");
             let df = extract_u8(&df_buffer, DF_LENGTH);
             i += DF_LENGTH;
-            println!("DF: {}", df);
             if df == 17 {
                 // ADS-B
                 // CA
@@ -68,7 +67,8 @@ pub fn proccess_samples(samples: Vec<f32>) -> Result<(), ModeSError> {
                     .try_into()
                     .expect("slice length is always ICAO_LENGTH");
                 // TODO: Not sure u8 works here, but it"ll do to build :)
-                let icao = extract_u8(&icao_buffer, ICAO_LENGTH);
+                // THIS DOESN'T WORK, FOR OBVIOUS REASONS 24 BITS MORE THAN 8 REQUIRED FOR U8
+                // let icao = extract_u8(&icao_buffer, ICAO_LENGTH);
                 i += ICAO_LENGTH;
                 // Message
                 let message_buffer: [f32; MESSAGE_LENGTH] = samples[i..i + MESSAGE_LENGTH]
@@ -85,7 +85,8 @@ pub fn proccess_samples(samples: Vec<f32>) -> Result<(), ModeSError> {
                     .try_into()
                     .expect("slice length is always PARITY_LENGTH");
                 // TODO: Not sure u8 works here, but it"ll do to build :)
-                let parity = extract_u8(&parity_buffer, PARITY_LENGTH);
+                // THIS DOESN'T WORK, FOR OBVIOUS REASONS 24 BITS MORE THAN 8 REQUIRED FOR U8
+                // let parity = extract_u8(&parity_buffer, PARITY_LENGTH);
                 i += PARITY_LENGTH;
 
                 println!("TC: {}", tc);
@@ -116,11 +117,11 @@ fn check_preamble(magnitude_buffer: [f32; PREAMBLE_LENGTH]) -> bool {
 
 fn extract_u8(buffer: &[f32], buffer_len: usize) -> u8 {
     let mut result = 0u8;
-    for bit in 0..buffer_len {
+    for bit in 0..(buffer_len / 2) {
         let first = buffer[bit * 2];
         let second = buffer[(bit * 2) + 1];
         if first > second {
-            result |= 1 << (4 - bit);
+            result |= 1 << ((buffer_len / 2 - 1) - bit);
         }
     }
 
@@ -130,9 +131,16 @@ fn extract_u8(buffer: &[f32], buffer_len: usize) -> u8 {
 // TODO: temp function
 // this is horrible code, just trying to brute force
 fn decode_callsign(me_buffer: [f32; 112]) -> String {
-    let temp = me_buffer[(8 * 2)..(MESSAGE_LENGTH * 2)].to_vec();
+    // 8 * 2 just skips the 10 + 6 samples for TC & CA found at the beginning
+    let temp = me_buffer[(8 * 2)..MESSAGE_LENGTH].to_vec();
     let mut result = String::with_capacity(8);
-    let callsign_char_bit_length: usize = 6;
+    let callsign_char_bit_length: usize = 6 * 2;
+
+    print!("[");
+    for i in 0..callsign_char_bit_length {
+        print!("{},", temp[i]);
+    }
+    println!("]");
 
     for i in 0..7 {
         let start_index = i * callsign_char_bit_length;
@@ -144,12 +152,33 @@ fn decode_callsign(me_buffer: [f32; 112]) -> String {
     result
 }
 
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+
+    #[test]
+    fn test_extract_u8() {
+        // This assert would fire and test will fail.
+        // Please note, that private functions can be tested too!
+        let mut buffer = vec![0.0f32, 0.0f32, 1.0f32, 0.0f32];
+        assert_eq!(extract_u8(&buffer, 4), 1);
+        buffer = vec![
+            1.0f32, 0.0f32, 0.0f32, 0.0f32, 1.0f32, 0.0f32, 1.0f32, 0.0f32,
+        ];
+        assert_eq!(extract_u8(&buffer, buffer.len()), 11);
+        buffer = vec![1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0];
+        assert_eq!(extract_u8(&buffer, buffer.len()), 49);
+    }
+}
+
 // TODO: temp function
 // TODO: see below note
 // If you are familiar with the ASCII (American Standard Code for Information Interchange)
 // code, it is easy to identify that a callsign character
 // is encoded using the lower six bits of the same character in ASCII.
 fn u8_to_callsign_char(encoded_value: u8) -> &'static str {
+    println!("{}", encoded_value);
     match encoded_value {
         1 => "A",
         2 => "B",
