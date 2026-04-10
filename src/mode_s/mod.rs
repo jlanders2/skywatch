@@ -54,6 +54,7 @@ pub fn proccess_samples(samples: Vec<f32>) -> Result<(), ModeSError> {
                 .expect("slice length is always DF_LENGTH");
             let df = extract_u8(&df_buffer, DF_LENGTH);
             i += DF_LENGTH;
+            println!("DF: {}", df);
             if df == 17 {
                 // ADS-B
                 // CA
@@ -66,7 +67,7 @@ pub fn proccess_samples(samples: Vec<f32>) -> Result<(), ModeSError> {
                 let icao_buffer: [f32; ICAO_LENGTH] = samples[i..i + ICAO_LENGTH]
                     .try_into()
                     .expect("slice length is always ICAO_LENGTH");
-                // TODO: Not sure u8 works here, but it'll do to build :)
+                // TODO: Not sure u8 works here, but it"ll do to build :)
                 let icao = extract_u8(&icao_buffer, ICAO_LENGTH);
                 i += ICAO_LENGTH;
                 // Message
@@ -74,19 +75,24 @@ pub fn proccess_samples(samples: Vec<f32>) -> Result<(), ModeSError> {
                     .try_into()
                     .expect("slice length is always MESSAGE_LENGTH");
                 i += MESSAGE_LENGTH;
-                // TC
-                let tc_buffer: [f32; TC_LENGTH] = samples[i..i + TC_LENGTH]
+                // TC - contained in first 5 bits of message
+                let tc_buffer: [f32; TC_LENGTH] = message_buffer[0..TC_LENGTH]
                     .try_into()
                     .expect("slice length is always TC_LENGTH");
                 let tc = extract_u8(&tc_buffer, TC_LENGTH);
-                i += TC_LENGTH;
                 // Parity
                 let parity_buffer: [f32; PARITY_LENGTH] = samples[i..i + PARITY_LENGTH]
                     .try_into()
                     .expect("slice length is always PARITY_LENGTH");
-                // TODO: Not sure u8 works here, but it'll do to build :)
+                // TODO: Not sure u8 works here, but it"ll do to build :)
                 let parity = extract_u8(&parity_buffer, PARITY_LENGTH);
                 i += PARITY_LENGTH;
+
+                println!("TC: {}", tc);
+                if (tc >= 1 && tc <= 4) {
+                    let callsign = decode_callsign(message_buffer);
+                    println!("Detected Aircraft: {}", callsign);
+                }
             }
         } else {
             i += 1;
@@ -119,4 +125,68 @@ fn extract_u8(buffer: &[f32], buffer_len: usize) -> u8 {
     }
 
     result
+}
+
+// TODO: temp function
+// this is horrible code, just trying to brute force
+fn decode_callsign(me_buffer: [f32; 112]) -> String {
+    let temp = me_buffer[(8 * 2)..(MESSAGE_LENGTH * 2)].to_vec();
+    let mut result = String::with_capacity(8);
+    let callsign_char_bit_length: usize = 6;
+
+    for i in 0..7 {
+        let start_index = i * callsign_char_bit_length;
+        let end_index = start_index + callsign_char_bit_length;
+        let char_as_u8 = extract_u8(&temp[start_index..end_index], callsign_char_bit_length);
+        result.push_str(u8_to_callsign_char(char_as_u8));
+    }
+
+    result
+}
+
+// TODO: temp function
+// TODO: see below note
+// If you are familiar with the ASCII (American Standard Code for Information Interchange)
+// code, it is easy to identify that a callsign character
+// is encoded using the lower six bits of the same character in ASCII.
+fn u8_to_callsign_char(encoded_value: u8) -> &'static str {
+    match encoded_value {
+        1 => "A",
+        2 => "B",
+        3 => "C",
+        4 => "D",
+        5 => "E",
+        6 => "F",
+        7 => "G",
+        8 => "H",
+        9 => "I",
+        10 => "J",
+        11 => "K",
+        12 => "L",
+        13 => "M",
+        14 => "N",
+        15 => "O",
+        16 => "P",
+        17 => "Q",
+        18 => "R",
+        19 => "S",
+        20 => "T",
+        21 => "U",
+        22 => "V",
+        23 => "W",
+        24 => "X",
+        25 => "Y",
+        26 => "Z",
+        48 => "0",
+        49 => "1",
+        50 => "2",
+        51 => "3",
+        52 => "4",
+        53 => "5",
+        54 => "6",
+        55 => "7",
+        56 => "8",
+        57 => "9",
+        _ => "",
+    }
 }
