@@ -119,9 +119,3 @@ fn extract_u8(buffer: &[f32], buffer_len: usize) -> u8 {
 
     result
 }
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn ads_b_sample_processed() {}
-}
