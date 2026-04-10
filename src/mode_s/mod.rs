@@ -88,12 +88,6 @@ pub fn proccess_samples(samples: Vec<f32>) -> Result<(), ModeSError> {
                 // THIS DOESN'T WORK, FOR OBVIOUS REASONS 24 BITS MORE THAN 8 REQUIRED FOR U8
                 // let parity = extract_u8(&parity_buffer, PARITY_LENGTH);
                 i += PARITY_LENGTH;
-
-                println!("TC: {}", tc);
-                if (tc >= 1 && tc <= 4) {
-                    let callsign = decode_callsign(message_buffer);
-                    println!("Detected Aircraft: {}", callsign);
-                }
             }
         } else {
             i += 1;
@@ -126,96 +120,4 @@ fn extract_u8(buffer: &[f32], buffer_len: usize) -> u8 {
     }
 
     result
-}
-
-// TODO: temp function
-// this is horrible code, just trying to brute force
-fn decode_callsign(me_buffer: [f32; 112]) -> String {
-    // 8 * 2 just skips the 10 + 6 samples for TC & CA found at the beginning
-    let temp = me_buffer[(8 * 2)..MESSAGE_LENGTH].to_vec();
-    let mut result = String::with_capacity(8);
-    let callsign_char_bit_length: usize = 6 * 2;
-
-    print!("[");
-    for i in 0..callsign_char_bit_length {
-        print!("{},", temp[i]);
-    }
-    println!("]");
-
-    for i in 0..7 {
-        let start_index = i * callsign_char_bit_length;
-        let end_index = start_index + callsign_char_bit_length;
-        let char_as_u8 = extract_u8(&temp[start_index..end_index], callsign_char_bit_length);
-        result.push_str(u8_to_callsign_char(char_as_u8));
-    }
-
-    result
-}
-
-#[cfg(test)]
-mod tests {
-    // Note this useful idiom: importing names from outer (for mod tests) scope.
-    use super::*;
-
-    #[test]
-    fn test_extract_u8() {
-        // This assert would fire and test will fail.
-        // Please note, that private functions can be tested too!
-        let mut buffer = vec![0.0f32, 0.0f32, 1.0f32, 0.0f32];
-        assert_eq!(extract_u8(&buffer, 4), 1);
-        buffer = vec![
-            1.0f32, 0.0f32, 0.0f32, 0.0f32, 1.0f32, 0.0f32, 1.0f32, 0.0f32,
-        ];
-        assert_eq!(extract_u8(&buffer, buffer.len()), 11);
-        buffer = vec![1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0];
-        assert_eq!(extract_u8(&buffer, buffer.len()), 49);
-    }
-}
-
-// TODO: temp function
-// TODO: see below note
-// If you are familiar with the ASCII (American Standard Code for Information Interchange)
-// code, it is easy to identify that a callsign character
-// is encoded using the lower six bits of the same character in ASCII.
-fn u8_to_callsign_char(encoded_value: u8) -> &'static str {
-    println!("{}", encoded_value);
-    match encoded_value {
-        1 => "A",
-        2 => "B",
-        3 => "C",
-        4 => "D",
-        5 => "E",
-        6 => "F",
-        7 => "G",
-        8 => "H",
-        9 => "I",
-        10 => "J",
-        11 => "K",
-        12 => "L",
-        13 => "M",
-        14 => "N",
-        15 => "O",
-        16 => "P",
-        17 => "Q",
-        18 => "R",
-        19 => "S",
-        20 => "T",
-        21 => "U",
-        22 => "V",
-        23 => "W",
-        24 => "X",
-        25 => "Y",
-        26 => "Z",
-        48 => "0",
-        49 => "1",
-        50 => "2",
-        51 => "3",
-        52 => "4",
-        53 => "5",
-        54 => "6",
-        55 => "7",
-        56 => "8",
-        57 => "9",
-        _ => "",
-    }
 }
