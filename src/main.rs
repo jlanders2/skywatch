@@ -15,7 +15,15 @@ fn main() {
     let mut stream = device.get_stream().unwrap();
     loop {
         let samples = stream.read().unwrap();
-        mode_s::proccess_samples(samples).expect("Samples read successfully");
+        let hits = mode_s::proccess_samples(samples).expect("Samples read successfully");
+        for hit in hits {
+            if hit.downlink_format == 17 {
+                println!(
+                    "DF-{}, TC-{}",
+                    hit.downlink_format, hit.transponder_capability
+                );
+            }
+        }
     }
 
     // cleanup -> still not sure how to get to here.

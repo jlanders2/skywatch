@@ -2,9 +2,11 @@ use std::{error::Error, fmt};
 
 mod constants;
 mod enums;
+mod format;
 
 use constants::*;
 use enums::*;
+use format::*;
 
 // The following lengths are specific to 1090MHz ADS-B
 // and should be placed appropriately at some point.
@@ -32,7 +34,8 @@ impl fmt::Display for ModeSError {
     }
 }
 
-pub fn proccess_samples(samples: Vec<f32>) -> Result<(), ModeSError> {
+pub fn proccess_samples(samples: Vec<f32>) -> Result<Vec<AdsBData>, ModeSError> {
+    let mut ads_b_hits: Vec<AdsBData> = Vec::new();
     let samples_read = samples.len();
 
     let mut i = 0;
@@ -46,55 +49,48 @@ pub fn proccess_samples(samples: Vec<f32>) -> Result<(), ModeSError> {
             .expect("slice length is always PREAMBLE_LENGTH");
         let preamble_detected = check_preamble(preamble);
         if preamble_detected {
-            // TODO: Should read this into a struct
-            i += PREAMBLE_LENGTH;
+            i += PREAMBLE_LENGTH; // move forward
+            let mut ads_b_hit = AdsBData {
+                downlink_format: 0,
+                transponder_capability: 0,
+                message: [0; 56],
+            };
             // DF
             let df_buffer: [f32; DF_LENGTH] = samples[i..i + DF_LENGTH]
                 .try_into()
                 .expect("slice length is always DF_LENGTH");
-            let df = extract_u8(&df_buffer, DF_LENGTH);
-            i += DF_LENGTH;
-            if df == 17 {
-                // ADS-B
-                // CA
-                let ca_buffer: [f32; CA_LENGTH] = samples[i..i + CA_LENGTH]
-                    .try_into()
-                    .expect("slice length is always CA_LENGTH");
-                let ca = extract_u8(&ca_buffer, CA_LENGTH);
-                i += CA_LENGTH;
-                // ICAO
-                let icao_buffer: [f32; ICAO_LENGTH] = samples[i..i + ICAO_LENGTH]
-                    .try_into()
-                    .expect("slice length is always ICAO_LENGTH");
-                // TODO: Not sure u8 works here, but it"ll do to build :)
-                // THIS DOESN'T WORK, FOR OBVIOUS REASONS 24 BITS MORE THAN 8 REQUIRED FOR U8
-                // let icao = extract_u8(&icao_buffer, ICAO_LENGTH);
-                i += ICAO_LENGTH;
-                // Message
-                let message_buffer: [f32; MESSAGE_LENGTH] = samples[i..i + MESSAGE_LENGTH]
-                    .try_into()
-                    .expect("slice length is always MESSAGE_LENGTH");
-                i += MESSAGE_LENGTH;
-                // TC - contained in first 5 bits of message
-                let tc_buffer: [f32; TC_LENGTH] = message_buffer[0..TC_LENGTH]
-                    .try_into()
-                    .expect("slice length is always TC_LENGTH");
-                let tc = extract_u8(&tc_buffer, TC_LENGTH);
-                // Parity
-                let parity_buffer: [f32; PARITY_LENGTH] = samples[i..i + PARITY_LENGTH]
-                    .try_into()
-                    .expect("slice length is always PARITY_LENGTH");
-                // TODO: Not sure u8 works here, but it"ll do to build :)
-                // THIS DOESN'T WORK, FOR OBVIOUS REASONS 24 BITS MORE THAN 8 REQUIRED FOR U8
-                // let parity = extract_u8(&parity_buffer, PARITY_LENGTH);
-                i += PARITY_LENGTH;
+            ads_b_hit.downlink_format = extract_u8(&df_buffer, DF_LENGTH);
+            i += DF_LENGTH; // move forward
+            // CA
+            let ca_buffer: [f32; CA_LENGTH] = samples[i..i + CA_LENGTH]
+                .try_into()
+                .expect("slice length is always CA_LENGTH");
+            ads_b_hit.transponder_capability = extract_u8(&ca_buffer, CA_LENGTH);
+            i += CA_LENGTH; // move forward
+            // ICAO
+            i += ICAO_LENGTH; // move forward, skip icao
+            // Message
+            let message_buffer: [f32; MESSAGE_LENGTH] = samples[i..i + MESSAGE_LENGTH]
+                .try_into()
+                .expect("slice length is always MESSAGE_LENGTH");
+            // Loop over to extract bits
+            let mut temp = [0u8; 56];
+            for i in 0..MESSAGE_LENGTH / 2 {
+                let bit_slice = &message_buffer[i..i + 2];
+                let bit = extract_u8(bit_slice, bit_slice.len());
+                temp[i] = bit;
             }
+            ads_b_hit.message = temp;
+            i += MESSAGE_LENGTH; // move forward
+            // Parity
+            i += PARITY_LENGTH; // move forward, skip parity
+            ads_b_hits.push(ads_b_hit);
         } else {
             i += 1;
         }
     }
 
-    Ok(())
+    Ok(ads_b_hits)
 }
 
 fn check_preamble(magnitude_buffer: [f32; PREAMBLE_LENGTH]) -> bool {
@@ -109,15 +105,23 @@ fn check_preamble(magnitude_buffer: [f32; PREAMBLE_LENGTH]) -> bool {
     result
 }
 
+// Note to self, this is HIGHLY dependent on 2_000_000 sample rate
 fn extract_u8(buffer: &[f32], buffer_len: usize) -> u8 {
     let mut result = 0u8;
     for bit in 0..(buffer_len / 2) {
         let first = buffer[bit * 2];
         let second = buffer[(bit * 2) + 1];
         if first > second {
-            result |= 1 << ((buffer_len / 2 - 1) - bit);
+            // mode-s is Big endian
+            result |= 1 << (((buffer_len / 2) - 1) - bit);
         }
     }
 
     result
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn ads_b_sample_processed() {}
 }
