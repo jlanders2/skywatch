@@ -1,7 +1,7 @@
 - Magic numbers meets eraser, get rid of them
-- Look into testing frameworks and write a single SINGLE happy path test for a preamble
-- write a SINGLE happy path test for a DF-17 (ADB-S)
-- Learn more about the data block, DF was the last portion i really think i understood
+- Write tests to test assumptions of each portion of the
+  decoding process pre-amble, DF, etc. There is an example
+  that I can use in Junzi Sun's book
 - Finish readme
 - Better error handling
 - Don't include unecessary code in final binary (going to need to research this), but something like mock_sdr shouldn't be pulled in for "release"
