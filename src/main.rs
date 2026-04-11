@@ -1,7 +1,6 @@
 use skywatch::mode_s;
 use skywatch::mode_s::format::get_callsign;
 use skywatch::mode_s::format::get_type_code;
-use skywatch::mode_s::*;
 use skywatch::runtime;
 use skywatch::sdr::SdrDirection;
 

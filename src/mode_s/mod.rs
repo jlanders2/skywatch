@@ -1,11 +1,9 @@
 use std::{error::Error, fmt};
 
 mod constants;
-mod enums;
 pub mod format;
 
 use constants::*;
-use enums::*;
 use format::*;
 
 // The following lengths are specific to 1090MHz ADS-B
@@ -254,6 +252,7 @@ mod tests {
 
     #[test]
     fn test_process_samples_known_frame() {
+        // AI Generated Test Case
         // 8D4840D6202CC371C32CE0576098
         // DF=17 (10001), CA=5 (101), ICAO=4840D6, ME=202CC371C32CE0, PI=576098
         let df_bits = [1, 0, 0, 0, 1];
@@ -320,6 +319,7 @@ mod tests {
 
     #[test]
     fn test_process_samples_skw3780() {
+        // AI Generated Test Case
         // Raw frame: 8da32fd5234cb5f3df8c20f5d4af
         // ME: 234cb5f3df8c20
         // Expected callsign: SKW3780

@@ -11,13 +11,11 @@ pub struct AdsBData {
 }
 
 pub fn get_type_code(data: &AdsBData) -> u8 {
-    // are slices from a vec O(1)? Unlikely
-    // may want message to be an array, but for now
-    // don't care
     let tc_vec = &data.message[0..5];
     let mut result: u8 = 0;
     for i in 0..tc_vec.iter().len() {
         if tc_vec[i] == 1 {
+            // Guaranteed 5 bit length, so last index 5 - 1 = 4
             result |= 1 << (4 - i);
         }
     }
@@ -35,6 +33,7 @@ pub fn get_callsign(data: &AdsBData) -> String {
         let mut idx = 0u8;
         for j in 0..6 {
             if callsign_buffer[(i * 6) + j] == 1 {
+                // Guaranteed 6 bit length, so last index 6 - 1 = 5
                 idx |= 1 << (5 - j);
             }
         }
@@ -86,6 +85,7 @@ mod tests {
 
     #[test]
     fn test_get_callsign_klm1023() {
+        // AI Generated test case
         // ME field from 8D4840D6202CC371C32CE0576098
         // HEX: 202CC371C32CE0
         // BIN: 00100000001011001100001101110001110000110010110011100000
