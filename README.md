@@ -6,10 +6,6 @@ TODO
 
 TODO
 
-## Diclaimers
-
-**A note on AI tooling**: AI assistants were used during development as a learning and research aid — to understand signal processing concepts, explore Rust patterns, and reason through design decisions. All implementation code was written by hand. No AI-generated code is present in this codebase.
-
 ## Getting Started
 
 ### Dependencies
