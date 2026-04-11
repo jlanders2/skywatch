@@ -10,6 +10,7 @@ use format::*;
 
 // The following lengths are specific to 1090MHz ADS-B
 // and should be placed appropriately at some point.
+// They are also specifically tied to the sample rate
 static ADS_B_LENGTH: usize = 112 * 2; // 112 bits, 224 samples @ 2_000_000 sample rate
 static DF_LENGTH: usize = 5 * 2; // 5 bits, 10 samples @ 2_000_000 sample rate
 static CA_LENGTH: usize = 3 * 2; // 3 bits, 6 samples @ 2_000_000 sample rate
@@ -41,13 +42,14 @@ pub fn proccess_samples(samples: Vec<f32>) -> Result<Vec<AdsBData>, ModeSError> 
     let mut i = 0;
     while i < samples_read {
         // Preamble
-        if (i + ADS_B_LENGTH) >= samples_read {
+        if (i + ADS_B_LENGTH) > samples_read {
             break;
         }
         let preamble: [f32; PREAMBLE_LENGTH] = samples[i..i + PREAMBLE_LENGTH]
             .try_into()
             .expect("slice length is always PREAMBLE_LENGTH");
         let preamble_detected = check_preamble(preamble);
+
         if preamble_detected {
             i += PREAMBLE_LENGTH; // move forward
             let mut ads_b_hit = AdsBData {
@@ -66,6 +68,7 @@ pub fn proccess_samples(samples: Vec<f32>) -> Result<Vec<AdsBData>, ModeSError> 
                 .try_into()
                 .expect("slice length is always CA_LENGTH");
             ads_b_hit.transponder_capability = extract_u8(&ca_buffer, CA_LENGTH);
+
             i += CA_LENGTH; // move forward
             // ICAO
             i += ICAO_LENGTH; // move forward, skip icao
@@ -74,14 +77,17 @@ pub fn proccess_samples(samples: Vec<f32>) -> Result<Vec<AdsBData>, ModeSError> 
                 .try_into()
                 .expect("slice length is always MESSAGE_LENGTH");
             // Loop over to extract bits
-            let mut temp = [0u8; 56];
-            for i in 0..MESSAGE_LENGTH / 2 {
-                let bit_slice = &message_buffer[i..i + 2];
+            let mut temp = [0u8; MESSAGE_LENGTH / 2];
+            for j in 0..MESSAGE_LENGTH / 2 {
+                // j * 2 gives me the correct location in the doubled samples buffer
+                let bit_slice = &message_buffer[j * 2..(j * 2) + 2];
                 let bit = extract_u8(bit_slice, bit_slice.len());
-                temp[i] = bit;
+                dbg!(bit);
+                temp[j] = bit;
+
+                i += 2; // move forward, 1 bit 2 samples @ 2_000_000 sample rate
             }
             ads_b_hit.message = temp;
-            i += MESSAGE_LENGTH; // move forward
             // Parity
             i += PARITY_LENGTH; // move forward, skip parity
             ads_b_hits.push(ads_b_hit);
@@ -118,4 +124,129 @@ fn extract_u8(buffer: &[f32], buffer_len: usize) -> u8 {
     }
 
     result
+}
+
+// TODO: These tests aren't great, they mostly test happy path
+// and could easily be re-written to be more robust
+// Need quit a few helper methods though.
+#[cfg(test)]
+mod tests {
+    use crate::mode_s::{
+        ADS_B_LENGTH, CA_LENGTH, DF_LENGTH, ICAO_LENGTH, MESSAGE_LENGTH, PREAMBLE_LENGTH,
+        PREAMBLE_PATTERN, format::AdsBData, proccess_samples,
+    };
+
+    #[test]
+    fn df_extracts_correctly() {
+        let mut samples: Vec<f32> = Vec::new();
+        // Populate pre-amble
+        for sample in PREAMBLE_PATTERN {
+            if sample {
+                samples.push(1.0);
+            } else {
+                samples.push(0.0);
+            }
+        }
+        // Populate DF
+        samples.push(1.0); // 1
+        samples.push(0.0);
+        samples.push(0.0); // 0
+        samples.push(0.0);
+        samples.push(0.0); // 0
+        samples.push(0.0);
+        samples.push(0.0); // 0
+        samples.push(0.0);
+        samples.push(1.0); // 1
+        samples.push(0.0);
+        samples.push(0.0); // 0
+        samples.push(0.0);
+        samples.push(0.0); // 0
+        samples.push(0.0);
+        samples.push(1.0); // 1
+        samples.push(0.0);
+        // fill everything else with 0s
+        for i in 0..ADS_B_LENGTH - samples.iter().len() {
+            samples.push(0.0);
+        }
+        assert_eq!(samples.iter().len(), ADS_B_LENGTH);
+        let mut ads_b_results: Vec<AdsBData> = Vec::new();
+        ads_b_results = proccess_samples(samples).unwrap();
+
+        assert_eq!(ads_b_results[0].downlink_format, 17);
+    }
+
+    #[test]
+    fn ca_extracts_correctly() {
+        let mut samples: Vec<f32> = Vec::new();
+        // Populate pre-amble
+        for sample in PREAMBLE_PATTERN {
+            if sample {
+                samples.push(1.0);
+            } else {
+                samples.push(0.0);
+            }
+        }
+        // fill everything else with 0s
+        for i in 0..ADS_B_LENGTH - samples.iter().len() {
+            samples.push(0.0);
+        }
+        let ca_start = PREAMBLE_LENGTH + DF_LENGTH;
+        let ca_end = ca_start + CA_LENGTH;
+        for i in ca_start..ca_end {
+            if i % 2 == 0 {
+                samples[i] = 1.0;
+            } else {
+                samples[i] = 0.0;
+            }
+        }
+        assert_eq!(samples.iter().len(), ADS_B_LENGTH);
+        let mut ads_b_results: Vec<AdsBData> = Vec::new();
+        ads_b_results = proccess_samples(samples).unwrap();
+
+        assert_eq!(ads_b_results[0].transponder_capability, 7);
+    }
+
+    #[test]
+    fn message_extracts_correctly() {
+        let mut samples: Vec<f32> = Vec::new();
+        // Populate pre-amble
+        for sample in PREAMBLE_PATTERN {
+            if sample {
+                samples.push(1.0);
+            } else {
+                samples.push(0.0);
+            }
+        }
+        // fill everything else with 0s
+        for i in 0..ADS_B_LENGTH - samples.iter().len() {
+            samples.push(0.0);
+        }
+        let message_start = PREAMBLE_LENGTH + DF_LENGTH + CA_LENGTH + ICAO_LENGTH;
+        let message_end = message_start + MESSAGE_LENGTH;
+        let mut dbg_counter = 0;
+        for i in message_start..message_end {
+            println!("{}", i);
+            if i % 2 == 0 {
+                dbg_counter += 1;
+                samples[i] = 1.0;
+            } else {
+                samples[i] = 0.0;
+            }
+        }
+        assert_eq!(message_end - message_start, MESSAGE_LENGTH);
+        assert_eq!(samples.iter().len(), ADS_B_LENGTH);
+        let mut ads_b_results: Vec<AdsBData> = Vec::new();
+        ads_b_results = proccess_samples(samples).unwrap();
+        for ads_b_hit in ads_b_results {
+            for (i, message_bit) in ads_b_hit.message.iter().enumerate() {
+                assert_eq!(
+                    *message_bit,
+                    1,
+                    "Failed at index {}, bit {}",
+                    i,
+                    message_start + i
+                );
+            }
+        }
+    }
 }
