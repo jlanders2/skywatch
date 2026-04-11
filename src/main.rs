@@ -1,4 +1,7 @@
 use skywatch::mode_s;
+use skywatch::mode_s::format::get_callsign;
+use skywatch::mode_s::format::get_type_code;
+use skywatch::mode_s::*;
 use skywatch::runtime;
 use skywatch::sdr::SdrDirection;
 
@@ -18,10 +21,14 @@ fn main() {
         let hits = mode_s::proccess_samples(samples).expect("Samples read successfully");
         for hit in hits {
             if hit.downlink_format == 17 {
-                println!(
-                    "DF-{}, TC-{}",
-                    hit.downlink_format, hit.transponder_capability
-                );
+                let tc = get_type_code(&hit);
+                if tc >= 1 && tc <= 4 {
+                    let callsign = get_callsign(&hit);
+
+                    if !callsign.contains("#") {
+                        println!("Found: {}", callsign);
+                    }
+                }
             }
         }
     }

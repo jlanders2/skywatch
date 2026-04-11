@@ -2,7 +2,7 @@ use std::{error::Error, fmt};
 
 mod constants;
 mod enums;
-mod format;
+pub mod format;
 
 use constants::*;
 use enums::*;
@@ -35,6 +35,8 @@ impl fmt::Display for ModeSError {
     }
 }
 
+// In reality i don't need to loop or anything, i know the exact
+// slices needed for each location. So when refactoring consider this.
 pub fn proccess_samples(samples: Vec<f32>) -> Result<Vec<AdsBData>, ModeSError> {
     let mut ads_b_hits: Vec<AdsBData> = Vec::new();
     let samples_read = samples.len();
@@ -82,7 +84,6 @@ pub fn proccess_samples(samples: Vec<f32>) -> Result<Vec<AdsBData>, ModeSError> 
                 // j * 2 gives me the correct location in the doubled samples buffer
                 let bit_slice = &message_buffer[j * 2..(j * 2) + 2];
                 let bit = extract_u8(bit_slice, bit_slice.len());
-                dbg!(bit);
                 temp[j] = bit;
 
                 i += 2; // move forward, 1 bit 2 samples @ 2_000_000 sample rate
@@ -133,7 +134,9 @@ fn extract_u8(buffer: &[f32], buffer_len: usize) -> u8 {
 mod tests {
     use crate::mode_s::{
         ADS_B_LENGTH, CA_LENGTH, DF_LENGTH, ICAO_LENGTH, MESSAGE_LENGTH, PREAMBLE_LENGTH,
-        PREAMBLE_PATTERN, format::AdsBData, proccess_samples,
+        PREAMBLE_PATTERN,
+        format::{AdsBData, get_callsign},
+        proccess_samples,
     };
 
     #[test]
@@ -225,7 +228,6 @@ mod tests {
         let message_end = message_start + MESSAGE_LENGTH;
         let mut dbg_counter = 0;
         for i in message_start..message_end {
-            println!("{}", i);
             if i % 2 == 0 {
                 dbg_counter += 1;
                 samples[i] = 1.0;
@@ -248,5 +250,134 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn test_process_samples_known_frame() {
+        // 8D4840D6202CC371C32CE0576098
+        // DF=17 (10001), CA=5 (101), ICAO=4840D6, ME=202CC371C32CE0, PI=576098
+        let df_bits = [1, 0, 0, 0, 1];
+        let ca_bits = [1, 0, 1];
+        let icao_bits = [
+            0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0,
+        ];
+        let me_bits = [
+            0, 0, 1, 0, 0, // TC=4
+            0, 0, 0, // CA=0
+            0, 0, 1, 0, 1, 1, // K
+            0, 0, 1, 1, 0, 0, // L
+            0, 0, 1, 1, 0, 1, // M
+            1, 1, 0, 0, 0, 1, // 1
+            1, 1, 0, 0, 0, 0, // 0
+            1, 1, 0, 0, 1, 0, // 2
+            1, 1, 0, 0, 1, 1, // 3
+            1, 0, 0, 0, 0, 0, // space
+        ];
+        let pi_bits = [
+            0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0,
+        ];
+
+        // Helper: encode bits as PPM samples (1 = [1.0, 0.0], 0 = [0.0, 0.0])
+        fn to_samples(bits: &[u8]) -> Vec<f32> {
+            bits.iter()
+                .flat_map(|&b| {
+                    if b == 1 {
+                        vec![1.0, 0.0]
+                    } else {
+                        vec![0.0, 0.0]
+                    }
+                })
+                .collect()
+        }
+
+        // Preamble pattern (hardcoded from PREAMBLE_PATTERN)
+        let preamble: Vec<f32> = vec![
+            1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        ];
+
+        let mut samples: Vec<f32> = Vec::new();
+        samples.extend_from_slice(&preamble);
+        samples.extend(to_samples(&df_bits));
+        samples.extend(to_samples(&ca_bits));
+        samples.extend(to_samples(&icao_bits));
+        samples.extend(to_samples(&me_bits));
+        samples.extend(to_samples(&pi_bits));
+
+        let results = proccess_samples(samples).unwrap();
+        assert_eq!(results.len(), 1, "should detect exactly one frame");
+
+        let frame = &results[0];
+        assert_eq!(frame.downlink_format, 17);
+        assert_eq!(frame.transponder_capability, 5);
+
+        // Verify ME bits directly
+        let expected_me: [u8; 56] = [
+            0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0,
+            0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0,
+        ];
+        assert_eq!(frame.message, expected_me);
+    }
+
+    #[test]
+    fn test_process_samples_skw3780() {
+        // Raw frame: 8da32fd5234cb5f3df8c20f5d4af
+        // ME: 234cb5f3df8c20
+        // Expected callsign: SKW3780
+
+        let df_bits = [1, 0, 0, 0, 1];
+        let ca_bits = [1, 0, 1];
+        let icao_bits = [
+            1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1,
+        ];
+        let me_bits: [u8; 56] = [
+            0, 0, 1, 0, 0, // TC=4
+            0, 1, 1, // CA=3
+            0, 1, 0, 0, 1, 1, // 19 = S
+            0, 0, 1, 0, 1, 1, // 11 = K
+            0, 1, 0, 1, 1, 1, // 23 = W
+            1, 1, 0, 0, 1, 1, // 51 = 3
+            1, 1, 0, 1, 1, 1, // 55 = 7
+            1, 1, 1, 0, 0, 0, // 56 = 8
+            1, 1, 0, 0, 0, 0, // 48 = 0
+            1, 0, 0, 0, 0, 0, // 32 = space
+        ];
+        let pi_bits = [
+            1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1,
+        ];
+
+        fn to_samples(bits: &[u8]) -> Vec<f32> {
+            bits.iter()
+                .flat_map(|&b| {
+                    if b == 1 {
+                        vec![1.0, 0.0]
+                    } else {
+                        vec![0.0, 0.0]
+                    }
+                })
+                .collect()
+        }
+
+        let preamble: Vec<f32> = vec![
+            1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        ];
+
+        let mut samples: Vec<f32> = Vec::new();
+        samples.extend_from_slice(&preamble);
+        samples.extend(to_samples(&df_bits));
+        samples.extend(to_samples(&ca_bits));
+        samples.extend(to_samples(&icao_bits));
+        samples.extend(to_samples(&me_bits));
+        samples.extend(to_samples(&pi_bits));
+
+        let results = proccess_samples(samples).unwrap();
+        assert_eq!(results.len(), 1);
+
+        let frame = &results[0];
+        assert_eq!(frame.downlink_format, 17);
+        assert_eq!(frame.transponder_capability, 5);
+        assert_eq!(frame.message, me_bits);
+
+        let callsign = get_callsign(frame);
+        assert_eq!(callsign, "SKW3780 ");
     }
 }
