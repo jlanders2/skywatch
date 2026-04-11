@@ -23,6 +23,7 @@ pub fn get_type_code(data: &AdsBData) -> u8 {
     result
 }
 
+// AI Generated
 static CHARSET: &[u8] = b"#ABCDEFGHIJKLMNOPQRSTUVWXYZ##### ###############0123456789######";
 
 pub fn get_callsign(data: &AdsBData) -> String {

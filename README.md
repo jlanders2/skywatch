@@ -6,6 +6,10 @@ TODO
 
 TODO
 
+## Disclaimers
+
+**A note on AI tooling**: AI assistants were used as a learning and research aid throughout development — for understanding signal processing concepts, exploring Rust patterns, and reasoning through design decisions. Any AI-generated code present in the codebase is explicitly marked with an // AI Generated comment, which applies to the single following line unless otherwise noted (e.g. // AI Generated: details). All remaining code was written by hand, with no agentic tooling or vibe coding practices involved.
+
 ## Getting Started
 
 ### Dependencies
